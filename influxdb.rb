@@ -53,6 +53,11 @@ module Sensu::Extension
       settings = parse_settings()
 
       EventMachine::HttpRequest.new("http://#{ settings["host"] }:#{ settings["port"] }/db/#{ settings["database"] }/series?u=#{ settings["user"] }&p=#{ settings["password"] }").post :head => { "content-type" => "application/x-www-form-urlencoded" }, :body => body.to_json
+        
+      # You need to yield to the caller. The first argument should be the
+      # data you want to yield (in the case of handlers, nothing or an error
+      # string, and the return status of the extension.
+      yield('', 0)
     end
 
     private
