@@ -24,6 +24,10 @@ module Sensu::Extension
       # NOTE: Making sure we do not get any data from the Main
     end
 
+    def numeric?(value)
+      true if Float(value) rescue false
+    end
+
     def run(event_data)
       data = parse_event(event_data)
       values = Array.new()
@@ -40,8 +44,13 @@ module Sensu::Extension
         end
 
         metrics.push(key)
-        # TODO: Try and sanitise the time
-        values.push(value)
+       
+        # cast to numeric for values that look numeric	
+	if numeric?(value)
+          value = Float(value)
+	end
+
+	values.push(value)
       end
 
       body = [{
