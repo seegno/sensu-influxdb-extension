@@ -24,12 +24,16 @@ module Sensu::Extension
       # NOTE: Making sure we do not get any data from the Main
     end
 
+    def numeric?(value)
+      true if Float(value) rescue false
+    end
+
     def run(event_data)
       data = parse_event(event_data)
       values = Array.new()
       metrics = Array.new()
 
-      values.push(data["timestamp"].to_i, data["host"])
+      values.push((data["timestamp"].to_i) * 1000, data["host"])
       data["output"].split(/\n/).each do |line|
         key, value, time = line.split(/\s+/)
 
@@ -40,8 +44,13 @@ module Sensu::Extension
         end
 
         metrics.push(key)
-        # TODO: Try and sanitise the time
-        values.push(value)
+       
+        # cast to numeric for values that look numeric	
+	if numeric?(value)
+          value = Float(value)
+	end
+
+	values.push(value)
       end
 
       body = [{
@@ -53,6 +62,11 @@ module Sensu::Extension
       settings = parse_settings()
 
       EventMachine::HttpRequest.new("http://#{ settings["host"] }:#{ settings["port"] }/db/#{ settings["database"] }/series?u=#{ settings["user"] }&p=#{ settings["password"] }").post :head => { "content-type" => "application/x-www-form-urlencoded" }, :body => body.to_json
+        
+      # You need to yield to the caller. The first argument should be the
+      # data you want to yield (in the case of handlers, nothing or an error
+      # string, and the return status of the extension.
+      yield('', 0)
     end
 
     private
