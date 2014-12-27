@@ -29,7 +29,7 @@ module Sensu::Extension
       values = Array.new()
       metrics = Array.new()
 
-      values.push(data["timestamp"].to_i, data["host"])
+      values.push((data["timestamp"].to_i) * 1000, data["host"])
       data["output"].split(/\n/).each do |line|
         key, value, time = line.split(/\s+/)
 
