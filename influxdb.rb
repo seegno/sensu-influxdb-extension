@@ -51,8 +51,11 @@ module Sensu::Extension
       }]
 
       settings = parse_settings()
-      database = data["influxdb"]["database"] || settings["database"]
-
+      database = settings["database"]
+      begin
+        database = data["influxdb"]["database"]
+      rescue => e
+      end
       EventMachine::HttpRequest.new("http://#{ settings["host"] }:#{ settings["port"] }/db/#{ database }/series?u=#{ settings["user"] }&p=#{ settings["password"] }").post :head => { "content-type" => "application/x-www-form-urlencoded" }, :body => body.to_json
     end
 
@@ -61,13 +64,17 @@ module Sensu::Extension
         begin
           event = JSON.parse(event_data)
           data = {
-            "database" => event["check"]["influxdb"]["database"],
             "duration" => event["check"]["duration"],
             "host" => event["client"]["name"],
             "output" => event["check"]["output"],
             "series" => event["check"]["name"],
             "timestamp" => event["check"]["issued"]
           }
+	  begin
+            data['database'] = event["check"]["influxdb"]["database"]
+	  rescue NameError => e
+	    data['database'] = nil
+	  end
         rescue => e
           puts "Failed to parse event data"
         end
