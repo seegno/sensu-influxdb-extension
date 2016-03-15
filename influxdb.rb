@@ -53,7 +53,7 @@ module Sensu::Extension
         key.gsub!(',', '\,')
 
         # This will merge : default conf tags < check embedded tags < sensu client/host tag
-        tags = conf.fetch(:tags, {}).merge(event['check']['influxdb']['tags']).merge({'host' => host})
+        tags = conf.fetch('tags', {}).merge(event['check']['influxdb']['tags']).merge({'host' => host})
         tags.each do |tag, val|
           key += ",#{tag}=#{val}"
         end
