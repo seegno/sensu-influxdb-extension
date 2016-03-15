@@ -115,6 +115,13 @@ If specified, this overrides the default `database` option in the handler config
 
 This allows events to be written to different influxdb databases and modify key indexes on a check-by-check basis.
 
+`tag_regexp` can be used to extract tags from the metric name.
+Use [regexp named groups](http://ruby-doc.org/core-2.2.0/Regexp.html#class-Regexp-label-Capturing)
+to extract tag names and their corresponding values. Extracted tags will be
+removed from the metric name and multiple consecutive dots will be collapsed to a
+single one. Do not use nested groups within regular expression as it may not
+work well. Please note that regular expression is evaluated after `strip_metric` if any.
+
 You can also specify the time_precision of your check script in the check config with the `time_precision` attribute.
 
 ### Example check config

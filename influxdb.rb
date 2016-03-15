@@ -2,6 +2,7 @@ require 'rubygems' if RUBY_VERSION < '1.9.0'
 require 'em-http-request'
 require 'eventmachine'
 require 'json'
+require 'stringio'
 
 module Sensu::Extension
   class InfluxDB < Handler
@@ -34,6 +35,10 @@ module Sensu::Extension
       event['check']['influxdb']['database'] ||= conf['database']
       protocol = conf.fetch('ssl_enable', false) ? 'https' : 'http'
 
+      tag_regexp = if event['check']['influxdb']['tag_regexp'] then
+        Regexp.new(event['check']['influxdb']['tag_regexp'])
+      end
+
       event['check']['output'].split(/\n/).each do |line|
         key, value, time = line.split(/\s+/)
         values = "value=#{value.to_f}"
@@ -54,6 +59,32 @@ module Sensu::Extension
 
         # This will merge : default conf tags < check embedded tags < sensu client/host tag
         tags = conf.fetch(:tags, {}).merge(event['check']['influxdb']['tags']).merge({'host' => host})
+        # Process tag_regexp
+        if tag_regexp then
+          m = tag_regexp.match(key)
+          if m then
+            new_key = StringIO.new
+            new_key_i = 0
+            m.names.each do |tag|
+              if m[tag] then
+                tags[tag] = m[tag]
+
+                # Remove matched group from key
+                b = m.begin(tag)
+                e = m.end(tag)
+                if b - new_key_i > 0 and e - b > 0 then
+                  new_key << key.slice(new_key_i, b - new_key_i)
+                end
+                new_key_i = e
+              end
+            end
+            if new_key_i < key.length then
+              new_key << key.slice(new_key_i, key.length - new_key_i)
+            end
+            # Make sure we don't have .. after key processing
+            key = new_key.string.gsub(/\.+/, ".")
+          end
+        end
         tags.each do |tag, val|
           key += ",#{tag}=#{val}"
         end
